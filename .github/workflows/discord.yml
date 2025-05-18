@@ -3,17 +3,57 @@ name: Notify Discord on Push
 on:
   push:
     branches:
-      - main
+      - '**'
 
 jobs:
   notify:
     runs-on: ubuntu-latest
     steps:
-      - name: Send message to Discord
+      - name: Send fancy embed to Discord
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
         run: |
-          curl -H "Content-Type: application/json" \
-               -X POST \
-               -d "{\"content\": \"🚀 New push by \`${{ github.actor }}\` to \`${{ github.repository }}\`.\n📝 Message: ${{ github.event.head_commit.message }}\"}" \
-               $DISCORD_WEBHOOK
+          AUTHOR="${{ github.actor }}"
+          REPO="${{ github.repository }}"
+          BRANCH="${GITHUB_REF#refs/heads/}"
+          AVATAR_URL="https://github.com/${AUTHOR}.png"
+          COMMIT_URL="${{ github.event.head_commit.url }}"
+          TIMESTAMP="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
+          # Lấy danh sách commit
+          COMMITS=$(echo "${{ toJson(github.event.commits) }}" | jq -r '.[] | "- \(.message) [`\(.id[0:7])`](\(.url))"')
+
+          EMBED=$(cat <<EOF
+          {
+            "embeds": [
+              {
+                "title": "🚀 New Push to $REPO",
+                "url": "$COMMIT_URL",
+                "color": 3447003,
+                "author": {
+                  "name": "$AUTHOR",
+                  "icon_url": "$AVATAR_URL",
+                  "url": "https://github.com/$AUTHOR"
+                },
+                "fields": [
+                  {
+                    "name": "📦 Branch",
+                    "value": "\`$BRANCH\`",
+                    "inline": true
+                  },
+                  {
+                    "name": "📝 Commits",
+                    "value": "$COMMITS"
+                  }
+                ],
+                "footer": {
+                  "text": "GitHub Actions • $REPO"
+                },
+                "timestamp": "$TIMESTAMP"
+              }
+            ]
+          }
+EOF
+          )
+
+          echo "$EMBED" | curl -H "Content-Type: application/json" -X POST -d @- $DISCORD_WEBHOOK
