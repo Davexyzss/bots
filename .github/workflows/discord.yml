@@ -9,7 +9,7 @@ jobs:
   notify:
     runs-on: ubuntu-latest
     steps:
-      - name: Send fancy embed to Discord
+      - name: Send embed to Discord
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
         shell: bash
@@ -21,44 +21,30 @@ jobs:
           COMMIT_URL="${{ github.event.head_commit.url }}"
           TIMESTAMP="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
-          # Lấy danh sách commit
-          COMMITS=$(echo '${{ toJson(github.event.commits) }}' | jq -r '.[] | "- \(.message) [`\(.id[0:7])`](\(.url))"' | head -n 10)
+          # Get commit messages (limit to 5)
+          COMMITS=$(echo '${{ toJson(github.event.commits) }}' | jq -r '.[] | "- \(.message | gsub("\""; "\\\"")) [`\(.id[0:7])`](\(.url))"' | head -n 5)
 
-          # Escape commit messages cho JSON (nếu cần)
+          # Escape commits for JSON
           COMMITS_ESCAPED=$(echo "$COMMITS" | jq -Rs .)
 
-          # Tạo JSON embed
-          EMBED=$(cat <<EOF
-          {
-            "embeds": [
-              {
-                "title": "🚀 New Push to $REPO",
-                "url": "$COMMIT_URL",
-                "color": 3447003,
-                "author": {
-                  "name": "$AUTHOR",
-                  "icon_url": "$AVATAR_URL",
-                  "url": "https://github.com/$AUTHOR"
-                },
-                "fields": [
-                  {
-                    "name": "📦 Branch",
-                    "value": "$BRANCH",
-                    "inline": true
-                  },
-                  {
-                    "name": "📝 Commits",
-                    "value": $COMMITS_ESCAPED
-                  }
-                ],
-                "footer": {
-                  "text": "GitHub Actions • $REPO"
-                },
-                "timestamp": "$TIMESTAMP"
-              }
-            ]
-          }
-EOF
-          )
+          # Build JSON
+          JSON="{\"embeds\": [{
+            \"title\": \"🚀 New Push to $REPO\",
+            \"url\": \"$COMMIT_URL\",
+            \"color\": 3447003,
+            \"author\": {
+              \"name\": \"$AUTHOR\",
+              \"icon_url\": \"$AVATAR_URL\",
+              \"url\": \"https://github.com/$AUTHOR\"
+            },
+            \"fields\": [
+              { \"name\": \"📦 Branch\", \"value\": \"\`$BRANCH\`\", \"inline\": true },
+              { \"name\": \"📝 Commits\", \"value\": $COMMITS_ESCAPED }
+            ],
+            \"footer\": {
+              \"text\": \"GitHub Actions • $REPO\"
+            },
+            \"timestamp\": \"$TIMESTAMP\"
+          }]}"
 
-          echo "$EMBED" | curl -H "Content-Type: application/json" -X POST -d @- "$DISCORD_WEBHOOK"
+          echo "$JSON" | curl -H "Content-Type: application/json" -X POST -d @- "$DISCORD_WEBHOOK"
