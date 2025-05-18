@@ -1,1 +1,9 @@
-https://github.com/Davexyzss/bots/actions/workflows/ci.yml/badge.svg
+name: CI
+
+on: [push]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Hello CI!"
