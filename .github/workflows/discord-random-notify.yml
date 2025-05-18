@@ -2,7 +2,8 @@ name: Discord Random Notify Every 5 Minutes
 
 on:
   schedule:
-    - cron: "*/5 * * * *"  # Chạy mỗi 5 phút
+    - cron: "*/5 * * * *"   # Chạy mỗi 5 phút
+  workflow_dispatch:          # Cho phép chạy thủ công
 
 jobs:
   notify:
@@ -21,4 +22,11 @@ jobs:
           )
           rand_index=$(( RANDOM % ${#messages[@]} ))
           message="${messages[$rand_index]}"
-          echo "$message" | curl -H "Content-Type: application/json" -X POST -d @- "$DISCORD_WEBHOOK"
+
+          echo "Sending message: $message"
+
+          RESPONSE=$(echo "$message" | curl -s -w "%{http_code}" -o response.txt -H "Content-Type: application/json" -X POST -d @- "$DISCORD_WEBHOOK")
+
+          echo "Discord response HTTP code: $RESPONSE"
+          echo "Response body:"
+          cat response.txt
