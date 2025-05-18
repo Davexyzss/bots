@@ -1,2 +1,2 @@
-![Build Status](https://github.com/USERNAME/REPO/actions/workflows/ci.yml/badge.svg)
+![Build Status](https://github.com/Davexyzss/bots/actions/workflows/ci.yml/badge.svg)
 
