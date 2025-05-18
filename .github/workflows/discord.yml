@@ -3,18 +3,17 @@ name: Notify Discord on Push
 on:
   push:
     branches:
-      - main  # hoặc branch bạn muốn theo dõi
+      - main
 
 jobs:
   notify:
     runs-on: ubuntu-latest
     steps:
       - name: Send message to Discord
-        uses: tsickert/discord-webhook@v1.1.1
-        with:
-          webhook-url: ${{ secrets.DISCORD_WEBHOOK }}
-          content: |
-            🚀 **New push to `${{ github.repository }}`**
-            👤 By: `${{ github.actor }}`
-            🔢 Commit: `${{ github.sha }}`
-            📝 Message: `${{ github.event.head_commit.message }}`
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+        run: |
+          curl -H "Content-Type: application/json" \
+               -X POST \
+               -d "{\"content\": \"🚀 New push by \`${{ github.actor }}\` to \`${{ github.repository }}\`.\n📝 Message: ${{ github.event.head_commit.message }}\"}" \
+               $DISCORD_WEBHOOK
