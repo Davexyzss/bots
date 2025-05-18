@@ -1,0 +1,60 @@
+name: Discord Notify with Log
+
+on:
+  push:
+    branches:
+      - '**'
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send embed to Discord and save log
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+          AUTHOR: ${{ github.actor }}
+          REPO: ${{ github.repository }}
+          BRANCH: ${{ github.ref_name }}
+        shell: bash
+        run: |
+          TIMESTAMP="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          COMMIT_URL="${{ github.event.head_commit.url }}"
+
+          # Tạo nội dung embed (ví dụ đơn giản)
+          JSON=$(cat <<EOF
+{
+  "embeds": [
+    {
+      "title": "🚀 New Push to $REPO",
+      "url": "$COMMIT_URL",
+      "color": 3447003,
+      "author": {
+        "name": "$AUTHOR",
+        "url": "https://github.com/$AUTHOR",
+        "icon_url": "https://github.com/$AUTHOR.png"
+      },
+      "fields": [
+        {
+          "name": "Branch",
+          "value": "$BRANCH",
+          "inline": true
+        }
+      ],
+      "timestamp": "$TIMESTAMP"
+    }
+  ]
+}
+EOF
+          )
+
+          # Gửi webhook Discord
+          RESPONSE=$(echo "$JSON" | curl -s -H "Content-Type: application/json" -X POST -d @- "$DISCORD_WEBHOOK" -w "%{http_code}")
+
+          # Ghi log ra file
+          echo "$TIMESTAMP | Branch: $BRANCH | Author: $AUTHOR | Response code: $RESPONSE" >> discord-notify.log
+
+      - name: Upload log artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: discord-notify-log
+          path: discord-notify.log
