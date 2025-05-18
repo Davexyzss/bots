@@ -1,0 +1,24 @@
+name: Discord Random Notify Every 5 Minutes
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"  # Chạy mỗi 5 phút
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send random Discord message
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+        shell: bash
+        run: |
+          messages=(
+            '{"content":"Hello! This is a random message 🎉"}'
+            '{"content":"Keep calm and code on! 💻"}'
+            '{"content":"Push thành công rồi! 🚀"}'
+            '{"content":"Bug? Không có đâu! 😎"}'
+          )
+          rand_index=$(( RANDOM % ${#messages[@]} ))
+          message="${messages[$rand_index]}"
+          echo "$message" | curl -H "Content-Type: application/json" -X POST -d @- "$DISCORD_WEBHOOK"
