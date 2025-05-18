@@ -12,6 +12,7 @@ jobs:
       - name: Send fancy embed to Discord
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+        shell: bash
         run: |
           AUTHOR="${{ github.actor }}"
           REPO="${{ github.repository }}"
@@ -21,8 +22,12 @@ jobs:
           TIMESTAMP="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
           # Lấy danh sách commit
-          COMMITS=$(echo "${{ toJson(github.event.commits) }}" | jq -r '.[] | "- \(.message) [`\(.id[0:7])`](\(.url))"')
+          COMMITS=$(echo '${{ toJson(github.event.commits) }}' | jq -r '.[] | "- \(.message) [`\(.id[0:7])`](\(.url))"' | head -n 10)
 
+          # Escape commit messages cho JSON (nếu cần)
+          COMMITS_ESCAPED=$(echo "$COMMITS" | jq -Rs .)
+
+          # Tạo JSON embed
           EMBED=$(cat <<EOF
           {
             "embeds": [
@@ -38,12 +43,12 @@ jobs:
                 "fields": [
                   {
                     "name": "📦 Branch",
-                    "value": "\`$BRANCH\`",
+                    "value": "$BRANCH",
                     "inline": true
                   },
                   {
                     "name": "📝 Commits",
-                    "value": "$COMMITS"
+                    "value": $COMMITS_ESCAPED
                   }
                 ],
                 "footer": {
@@ -56,4 +61,4 @@ jobs:
 EOF
           )
 
-          echo "$EMBED" | curl -H "Content-Type: application/json" -X POST -d @- $DISCORD_WEBHOOK
+          echo "$EMBED" | curl -H "Content-Type: application/json" -X POST -d @- "$DISCORD_WEBHOOK"
